@@ -127,6 +127,17 @@ function App() {
     };
   }, []);
 
+  // Prevent native pull-to-refresh spinner by stopping touchmove default on entire document when dragging
+  useEffect(() => {
+    const preventDefaultOnDrag = (e: TouchEvent) => {
+      if (isDragging) {
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('touchmove', preventDefaultOnDrag, { passive: false });
+    return () => document.removeEventListener('touchmove', preventDefaultOnDrag);
+  }, [isDragging]);
+
   // Prevent iOS Safari tab overview gesture
   useEffect(() => {
     // This function will handle and prevent all touch events globally
@@ -402,14 +413,7 @@ function App() {
                   This is what happens when you pull to refresh on Twitter. The system fights back to create a tug-of-war experience!
                 </div>
 
-                {/* Post image */}
-                <div className="rounded-2xl overflow-hidden mb-3 border border-gray-800">
-                  <img
-                    src="https://pbs.twimg.com/media/GGuyhEDXUAA7hmR?format=jpg&name=900x900"
-                    alt="Post"
-                    className="w-full h-auto"
-                  />
-                </div>
+                {/* Post image removed to avoid broken image placeholder */}
 
                 {/* Actions */}
                 <div className="flex justify-between text-gray-500">
