@@ -56,6 +56,9 @@ function App() {
   const VOID_APPEAR_THRESHOLD = 20; // Only show void space after this threshold
   const MAX_PULL_DISTANCE = 300;
   const MESSAGE_THRESHOLD = 60; // When to start showing messages
+  const BASE_RESISTANCE = 0.4; // Increased from 0.2
+  const SPEED_RESISTANCE_FACTOR = 0.8; // Increased from 0.5
+  const POSITION_RESISTANCE_FACTOR = 0.08; // Increased from 0.05
 
   // System creates REAL-TIME resistance proportional to drag speed
   const animate = (timestamp: number) => {
@@ -67,12 +70,12 @@ function App() {
     if (isDragging) {
       // Apply resistance proportional to current drag speed/force
       if (pullDistanceRef.current > 0) {
-        // Base resistance increases with distance
-        const positionResistance = Math.min(10, pullDistanceRef.current * 0.05);
+        // Base resistance increases with distance (increased factor)
+        const positionResistance = Math.min(20, pullDistanceRef.current * POSITION_RESISTANCE_FACTOR);
 
-        // Speed-based resistance - applies more resistance when pulling harder/faster
+        // Speed-based resistance - applies more resistance when pulling harder/faster (increased factor)
         // currentDragSpeedRef is positive when pulling down quickly
-        const speedResistance = Math.max(0, currentDragSpeedRef.current * 0.5);
+        const speedResistance = Math.max(0, currentDragSpeedRef.current * SPEED_RESISTANCE_FACTOR);
 
         // Combine position and speed resistance, with speed having bigger impact
         const totalResistance = positionResistance + speedResistance;
@@ -85,7 +88,7 @@ function App() {
         });
 
         // Show fight messages during intense tug-of-war
-        if (speedResistance > 5 && pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.92) {
+        if (speedResistance > 4 && pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.92) {
           const randomMessage = FIGHT_MESSAGES[Math.floor(Math.random() * FIGHT_MESSAGES.length)];
           setFightMessage(randomMessage);
           setShowMessage(true);
@@ -93,8 +96,8 @@ function App() {
         }
       }
     } else if (pullDistanceRef.current > 0) {
-      // Quick spring-back when released
-      const releaseSpringForce = Math.max(pullDistanceRef.current * 0.25, 12) * smoothDelta;
+      // Quick spring-back when released (increased spring force)
+      const releaseSpringForce = Math.max(pullDistanceRef.current * 0.3, 15) * smoothDelta;
       setPullDistance(prev => {
         const newValue = Math.max(0, prev - releaseSpringForce);
         pullDistanceRef.current = newValue;
@@ -102,20 +105,12 @@ function App() {
       });
     }
 
-    // Spinner rotation
-    if (pullDistanceRef.current > VOID_APPEAR_THRESHOLD) {
-      const rotationSpeed = 120 * smoothDelta;
-      setSpinnerRotation(prev => (prev + rotationSpeed) % 360);
-    }
+    // Always spin the spinner, even when not pulling
+    const rotationSpeed = pullDistanceRef.current > 0 ? 120 * smoothDelta : 60 * smoothDelta;
+    setSpinnerRotation(prev => (prev + rotationSpeed) % 360);
 
-    if (pullDistanceRef.current > 0 || isDragging || isRefreshing) {
-      animationRef.current = requestAnimationFrame(animate);
-    } else {
-      lastTimeRef.current = 0;
-      resistanceRef.current = 0;
-      pullVelocityRef.current = 0;
-      currentDragSpeedRef.current = 0;
-    }
+    // Continue animation loop
+    animationRef.current = requestAnimationFrame(animate);
   };
 
   // Cleanup animation on unmount
@@ -202,23 +197,23 @@ function App() {
     }
 
     if (dragY > 0) {
-      // Calculate base resistance that smoothly increases with distance
-      let baseResistance = 0.2 + (pullDistanceRef.current / MAX_PULL_DISTANCE) * 0.5;
+      // Calculate base resistance that smoothly increases with distance (increased base and factor)
+      let baseResistance = BASE_RESISTANCE + (pullDistanceRef.current / MAX_PULL_DISTANCE) * 0.7;
 
       // Calculate speed-based resistance - increases dramatically with faster pulling
       // This creates the "fighting back harder when you pull harder" effect
       let speedResistance = 0;
-      if (currentDragSpeedRef.current > 50) {
-        // Only add strong resistance when pulling down fast (>50px/s)
-        speedResistance = Math.min(0.6, (currentDragSpeedRef.current - 50) / 800);
+      if (currentDragSpeedRef.current > 30) { // Lowered threshold from 50 to 30
+        // Only add strong resistance when pulling down fast (>30px/s)
+        speedResistance = Math.min(0.8, (currentDragSpeedRef.current - 30) / 600); // Increased from 0.6
       }
 
       // The harder you pull (higher speed), the more resistance you get
-      const totalResistance = Math.min(0.95, baseResistance + speedResistance);
+      const totalResistance = Math.min(0.97, baseResistance + speedResistance); // Increased from 0.95
 
-      // Multi-finger reduces resistance
+      // Multi-finger reduces resistance, but less than before
       const effectiveResistance = isMultiTouch ?
-        totalResistance * 0.6 : // 40% easier with multiple fingers
+        totalResistance * 0.7 : // 30% easier with multiple fingers (instead of 40%)
         totalResistance;
 
       // Apply the resistance to the drag movement
@@ -347,13 +342,15 @@ function App() {
             )}
 
             <div className={isRefreshing ? "spinner-container" : ""}>
-              {/* X's gray spinner design */}
+              {/* X's gray spinner design - always spinning */}
               <svg
                 className="w-8 h-8 text-gray-500 x-spinner"
                 viewBox="0 0 32 32"
                 style={{
                   transform: isRefreshing ? 'none' : `rotate(${spinnerRotation}deg)`,
-                  opacity: Math.min(1, (pullDistanceRef.current - VOID_APPEAR_THRESHOLD) / (REFRESH_THRESHOLD - VOID_APPEAR_THRESHOLD))
+                  opacity: pullDistanceRef.current > 0 ?
+                    Math.min(1, (pullDistanceRef.current - VOID_APPEAR_THRESHOLD) / (REFRESH_THRESHOLD - VOID_APPEAR_THRESHOLD)) :
+                    0.3 // Always show spinner with minimal opacity when not pulling
                 }}
               >
                 <circle cx="16" cy="16" r="14" fill="none" stroke="#333" strokeWidth="4" />
@@ -366,6 +363,28 @@ function App() {
                 />
               </svg>
             </div>
+          </div>
+        )}
+
+        {/* Always show spinner when not pulling enough to show void space */}
+        {pullDistance <= VOID_APPEAR_THRESHOLD && (
+          <div className="absolute top-[110px] left-1/2 transform -translate-x-1/2 z-10" style={{opacity: 0.3}}>
+            <svg
+              className="w-8 h-8 text-gray-500 x-spinner"
+              viewBox="0 0 32 32"
+              style={{
+                transform: `rotate(${spinnerRotation}deg)`
+              }}
+            >
+              <circle cx="16" cy="16" r="14" fill="none" stroke="#333" strokeWidth="4" />
+              <path
+                d="M16,2 A14,14 0 0,1 30,16"
+                fill="none"
+                stroke="#888"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+            </svg>
           </div>
         )}
 
