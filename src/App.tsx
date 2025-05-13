@@ -34,6 +34,9 @@ function App() {
 
   // Use a ref for the pullDistance to avoid animation lag from state updates
   const pullDistanceRef = useRef(0);
+  const currentDragSpeedRef = useRef(0); // Track the current dragging speed/force
+  const lastDragTimeRef = useRef(Date.now());
+  const lastDragPositionRef = useRef(0);
 
   // When pullDistance state changes, update the ref
   useEffect(() => {
@@ -47,7 +50,6 @@ function App() {
   const resistanceRef = useRef<number>(0);
   const pullVelocityRef = useRef<number>(0);
   const lastDragYRef = useRef<number>(0);
-  const lastDragTimeRef = useRef<number>(Date.now());
 
   // Constants
   const REFRESH_THRESHOLD = 120;
@@ -55,47 +57,52 @@ function App() {
   const MAX_PULL_DISTANCE = 300;
   const MESSAGE_THRESHOLD = 60; // When to start showing messages
 
-  // System creates VERY STRONG, direct resistance
+  // System creates REAL-TIME resistance proportional to drag speed
   const animate = (timestamp: number) => {
     if (!lastTimeRef.current) lastTimeRef.current = timestamp;
     const delta = timestamp - lastTimeRef.current;
-    const smoothDelta = Math.max(1, delta / 16.667); // Ensure smoothDelta is at least 1
+    const smoothDelta = Math.max(1, delta / 16.667);
     lastTimeRef.current = timestamp;
 
     if (isDragging) {
-      // System actively pulls back - EXTREMELY STRONG
-      if (pullDistanceRef.current > 1) { // Start pulling back immediately
-        // Very direct and powerful pull-back force
-        const pullBackForce = 0.15 * pullDistanceRef.current * pullDistanceRef.current * 0.005;
-        let resistanceAmount = pullBackForce * smoothDelta;
+      // Apply resistance proportional to current drag speed/force
+      if (pullDistanceRef.current > 0) {
+        // Base resistance increases with distance
+        const positionResistance = Math.min(10, pullDistanceRef.current * 0.05);
 
-        // Add a more consistent strong resistance
-        resistanceAmount += Math.max(0.5, pullDistanceRef.current * 0.03) * smoothDelta;
+        // Speed-based resistance - applies more resistance when pulling harder/faster
+        // currentDragSpeedRef is positive when pulling down quickly
+        const speedResistance = Math.max(0, currentDragSpeedRef.current * 0.5);
 
+        // Combine position and speed resistance, with speed having bigger impact
+        const totalResistance = positionResistance + speedResistance;
+
+        // Apply the resistance as a counter-force
         setPullDistance(prev => {
-          const newValue = Math.max(0, prev - resistanceAmount);
+          const newValue = Math.max(0, prev - totalResistance * smoothDelta);
           pullDistanceRef.current = newValue;
           return newValue;
         });
 
-        // Show fight messages when resistance is extreme
-        if (resistanceAmount > 3.0 && pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.85) {
+        // Show fight messages during intense tug-of-war
+        if (speedResistance > 5 && pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.92) {
           const randomMessage = FIGHT_MESSAGES[Math.floor(Math.random() * FIGHT_MESSAGES.length)];
           setFightMessage(randomMessage);
           setShowMessage(true);
-          setTimeout(() => setShowMessage(false), 1200);
+          setTimeout(() => setShowMessage(false), 1000);
         }
       }
     } else if (pullDistanceRef.current > 0) {
-      // Quick spring-back
-      const releaseSpringForce = Math.max(pullDistanceRef.current * 0.30, 20) * smoothDelta;
+      // Quick spring-back when released
+      const releaseSpringForce = Math.max(pullDistanceRef.current * 0.25, 12) * smoothDelta;
       setPullDistance(prev => {
         const newValue = Math.max(0, prev - releaseSpringForce);
         pullDistanceRef.current = newValue;
         return newValue;
       });
     }
-    // ... (spinner and requestAnimationFrame logic remains the same)
+
+    // Spinner rotation
     if (pullDistanceRef.current > VOID_APPEAR_THRESHOLD) {
       const rotationSpeed = 120 * smoothDelta;
       setSpinnerRotation(prev => (prev + rotationSpeed) % 360);
@@ -107,6 +114,7 @@ function App() {
       lastTimeRef.current = 0;
       resistanceRef.current = 0;
       pullVelocityRef.current = 0;
+      currentDragSpeedRef.current = 0;
     }
   };
 
@@ -164,8 +172,10 @@ function App() {
       setDragStartY(clientY);
       lastDragYRef.current = clientY;
       lastDragTimeRef.current = Date.now();
+      lastDragPositionRef.current = clientY;
       resistanceRef.current = 0;
       pullVelocityRef.current = 0;
+      currentDragSpeedRef.current = 0;
 
       if (!animationRef.current) {
         animationRef.current = requestAnimationFrame(animate);
@@ -173,36 +183,52 @@ function App() {
     }
   };
 
-  // Handle drag movement with EXTREMELY AGGRESSIVE and direct resistance
+  // Handle drag movement with REAL-TIME resistance
   const handleDragMove = (clientY: number, isMultiTouch: boolean = false) => {
     if (!isDragging || isRefreshing) return;
 
+    const now = Date.now();
+    const deltaTime = now - lastDragTimeRef.current;
+    lastDragTimeRef.current = now;
+
     const dragY = clientY - dragStartY;
+    const dragDelta = clientY - lastDragPositionRef.current;
+    lastDragPositionRef.current = clientY;
+
+    // Calculate instantaneous drag speed (pixels per second)
+    if (deltaTime > 0) {
+      // positive value = pulling down fast, negative = moving up or releasing
+      currentDragSpeedRef.current = (dragDelta / deltaTime) * 1000;
+    }
 
     if (dragY > 0) {
-      // Extremely high resistance factor that ramps up very fast
-      let resistanceFactor = 0.65; // Start with very high resistance
-      if (pullDistanceRef.current > 5) { // Ramp up almost immediately
-        // Exponential increase in resistance
-        resistanceFactor += Math.pow(pullDistanceRef.current / MAX_PULL_DISTANCE, 0.5) * 0.33;
-      }
-      resistanceFactor = Math.min(0.99, resistanceFactor); // Cap at 99% - almost impossible to pull further
+      // Calculate base resistance that smoothly increases with distance
+      let baseResistance = 0.2 + (pullDistanceRef.current / MAX_PULL_DISTANCE) * 0.5;
 
-      // Multi-touch provides a small amount of help against the extreme resistance
-      if (isMultiTouch) {
-        resistanceFactor *= 0.85; // Multi-touch makes it 15% easier, still very hard
+      // Calculate speed-based resistance - increases dramatically with faster pulling
+      // This creates the "fighting back harder when you pull harder" effect
+      let speedResistance = 0;
+      if (currentDragSpeedRef.current > 50) {
+        // Only add strong resistance when pulling down fast (>50px/s)
+        speedResistance = Math.min(0.6, (currentDragSpeedRef.current - 50) / 800);
       }
 
-      const effectiveDragAmount = dragY * (1 - resistanceFactor);
+      // The harder you pull (higher speed), the more resistance you get
+      const totalResistance = Math.min(0.95, baseResistance + speedResistance);
 
+      // Multi-finger reduces resistance
+      const effectiveResistance = isMultiTouch ?
+        totalResistance * 0.6 : // 40% easier with multiple fingers
+        totalResistance;
+
+      // Apply the resistance to the drag movement
+      const effectiveDrag = dragDelta * (1 - effectiveResistance);
+
+      // Update position with the effective drag after resistance
       setPullDistance(prev => {
-        // Apply a small fraction of the already tiny effective drag
-        // This will make movement very slow and difficult when resistance is high
-        const target = Math.min(MAX_PULL_DISTANCE, prev + effectiveDragAmount * 0.05);
-        // Minimal blending to make the difficulty very apparent
-        const newDistance = prev * 0.30 + target * 0.70;
-        pullDistanceRef.current = newDistance;
-        return newDistance;
+        const newValue = Math.min(MAX_PULL_DISTANCE, prev + effectiveDrag);
+        pullDistanceRef.current = newValue;
+        return newValue;
       });
     }
   };
