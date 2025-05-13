@@ -236,28 +236,25 @@ function App() {
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    handleDragMove(e.touches[0].clientY);
+    handleDragMove(e.touches[0].clientY); // Continue normal drag logic with the primary finger
 
-    // Handle multi-touch - prevent iOS Safari tab overview
-    if (e.touches.length > 1) {
+    // Handle multi-touch - if user adds more fingers, simulate stronger pull
+    if (e.touches.length > 1 && isDragging && pullDistanceRef.current > 0) {
+      // Apply a boost to the current pull distance to simulate extra force
+      // This makes it feel like the user is overpowering the resistance with more fingers
+      const multiFingerBoost = 5; // Boost pixels per multi-touch frame
+
+      setPullDistance(prev => {
+        const boostedDistance = Math.min(MAX_PULL_DISTANCE, prev + multiFingerBoost);
+        pullDistanceRef.current = boostedDistance;
+        return boostedDistance;
+      });
+
+      // Prevent default browser actions for multi-touch (e.g., iOS tab overview)
       e.preventDefault();
       e.stopPropagation();
-
-      // If user adds a second finger, increase the drag strength (simulate harder pull)
-      // This allows the user to engage "both hands" as requested
-      if (pullDistanceRef.current > 0) {
-        // Simulate a harder pull when multiple fingers are used
-        setPullDistance(prev => {
-          const newDist = Math.min(MAX_PULL_DISTANCE, prev * 1.2);
-          pullDistanceRef.current = newDist;
-          return newDist;
-        });
-      }
-    }
-
-    // Prevent default behavior only when we're actively dragging
-    // This is crucial to prevent the browser's native pull-to-refresh
-    if (isDragging && pullDistanceRef.current > 0) {
+    } else if (isDragging && pullDistanceRef.current > 0) {
+       // Standard prevention for single-touch drag to avoid native pull-to-refresh
       e.preventDefault();
       e.stopPropagation();
     }
