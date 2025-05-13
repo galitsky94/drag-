@@ -55,7 +55,7 @@ function App() {
   const MAX_PULL_DISTANCE = 300;
   const MESSAGE_THRESHOLD = 60; // When to start showing messages
 
-  // System creates smooth, predictable resistance
+  // System creates smooth, predictable, and STRONG resistance
   const animate = (timestamp: number) => {
     if (!lastTimeRef.current) lastTimeRef.current = timestamp;
     const delta = timestamp - lastTimeRef.current;
@@ -63,11 +63,11 @@ function App() {
     lastTimeRef.current = timestamp;
 
     if (isDragging) {
-      // System actively pulls back based on how far it's been dragged
-      if (pullDistanceRef.current > 10) { // Start pulling back after a small initial drag
-        // Resistance force increases quadratically with pullDistance
-        const pullBackStrength = 0.002 * Math.pow(pullDistanceRef.current, 1.5);
-        const resistanceForce = pullBackStrength * smoothDelta * 1.5; // Make it feel strong
+      // System actively pulls back based on how far it's been dragged - STRONGER
+      if (pullDistanceRef.current > 5) { // Start pulling back almost immediately
+        // Resistance force increases quadratically with pullDistance - STRONGER
+        const pullBackStrength = 0.003 * Math.pow(pullDistanceRef.current, 1.6);
+        const resistanceForce = pullBackStrength * smoothDelta * 1.8; // Significantly stronger pull-back
 
         setPullDistance(prev => {
           const newValue = Math.max(0, prev - resistanceForce);
@@ -76,7 +76,7 @@ function App() {
         });
 
         // Show fight messages when resistance is significant
-        if (resistanceForce > 1 && pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.95) {
+        if (resistanceForce > 1.5 && pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.92) {
           const randomMessage = FIGHT_MESSAGES[Math.floor(Math.random() * FIGHT_MESSAGES.length)];
           setFightMessage(randomMessage);
           setShowMessage(true);
@@ -84,8 +84,8 @@ function App() {
         }
       }
     } else if (pullDistanceRef.current > 0) {
-      // Smooth and quick spring-back when released (Point 4)
-      const releaseSpringForce = Math.max(pullDistanceRef.current * 0.20, 10) * smoothDelta; // Faster retraction
+      // Smooth and quick spring-back when released
+      const releaseSpringForce = Math.max(pullDistanceRef.current * 0.22, 12) * smoothDelta; // Slightly faster retraction
       setPullDistance(prev => {
         const newValue = Math.max(0, prev - releaseSpringForce);
         pullDistanceRef.current = newValue;
@@ -170,31 +170,33 @@ function App() {
     }
   };
 
-  // Handle drag movement with smooth, predictable, increasing resistance
-  const handleDragMove = (clientY: number) => {
+  // Handle drag movement with STRONGER, smooth, predictable, increasing resistance
+  const handleDragMove = (clientY: number, isMultiTouch: boolean = false) => {
     if (!isDragging || isRefreshing) return;
 
     const dragY = clientY - dragStartY;
 
     if (dragY > 0) {
-      // Point 1: Initial Easy Pull - Resistance starts low
-      // Point 2: Increasing, Non-Dynamic Resistance - Ramps up significantly
-      let resistanceFactor = 0.1; // Initial low resistance
-      if (pullDistanceRef.current > 30) { // Start ramping up resistance after initial easy pull
-        // Resistance increases quadratically making it much harder to pull further
-        const distanceEffect = (pullDistanceRef.current - 30) / (MAX_PULL_DISTANCE - 30);
-        resistanceFactor += Math.pow(distanceEffect, 2) * 0.85; // Max additional 0.85 resistance
+      // Base resistance is now higher for single finger
+      let resistanceFactor = 0.25; // Increased initial resistance
+      if (pullDistanceRef.current > 20) { // Start ramping up resistance sooner
+        const distanceEffect = (pullDistanceRef.current - 20) / (MAX_PULL_DISTANCE - 20);
+        // Significantly stronger ramp-up
+        resistanceFactor += Math.pow(distanceEffect, 1.8) * 0.70; // Max additional 0.70 resistance, steeper curve
       }
-      resistanceFactor = Math.min(0.95, resistanceFactor); // Cap resistance at 95%
+
+      // If multi-touch, reduce resistance by a factor to make it easier
+      if (isMultiTouch) {
+        resistanceFactor *= 0.6; // Multi-touch makes it 40% easier (reduces resistance)
+      }
+
+      resistanceFactor = Math.min(0.97, resistanceFactor); // Cap resistance at 97% for single, less for multi
 
       const effectiveDrag = dragY * (1 - resistanceFactor);
 
-      // Point 3: Effort to Refresh - achieved by strong resistanceFactor
       setPullDistance(prev => {
-        // Smoothly blend to the new position based on effectiveDrag
-        const target = Math.min(MAX_PULL_DISTANCE, prev + effectiveDrag * 0.1); // Apply a fraction of effective drag per frame for smoothness
-        // Smoother transition: Lerp (linear interpolation)
-        const lerpedDistance = prev * 0.7 + target * 0.3;
+        const target = Math.min(MAX_PULL_DISTANCE, prev + effectiveDrag * 0.08); // Slower application of effective drag
+        const lerpedDistance = prev * 0.65 + target * 0.35; // More weight on previous for smoother, slower pull
         pullDistanceRef.current = lerpedDistance;
         return lerpedDistance;
       });
@@ -236,13 +238,14 @@ function App() {
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    handleDragMove(e.touches[0].clientY); // Continue normal drag logic with the primary finger
+    const isMultiTouch = e.touches.length > 1;
+    handleDragMove(e.touches[0].clientY, isMultiTouch);
 
-    // Handle multi-touch - if user adds more fingers, simulate stronger pull
-    if (e.touches.length > 1 && isDragging && pullDistanceRef.current > 0) {
+    // Handle multi-touch - if user adds more fingers, simulate extra force
+    if (isMultiTouch && isDragging && pullDistanceRef.current > 0) {
       // Apply a boost to the current pull distance to simulate extra force
       // This makes it feel like the user is overpowering the resistance with more fingers
-      const multiFingerBoost = 5; // Boost pixels per multi-touch frame
+      const multiFingerBoost = 12; // Boost pixels per multi-touch frame (increased for more effect)
 
       setPullDistance(prev => {
         const boostedDistance = Math.min(MAX_PULL_DISTANCE, prev + multiFingerBoost);
@@ -254,7 +257,7 @@ function App() {
       e.preventDefault();
       e.stopPropagation();
     } else if (isDragging && pullDistanceRef.current > 0) {
-       // Standard prevention for single-touch drag to avoid native pull-to-refresh
+      // Standard prevention for single-touch drag to avoid native pull-to-refresh
       e.preventDefault();
       e.stopPropagation();
     }
