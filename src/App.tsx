@@ -67,50 +67,57 @@ function App() {
     if (isDragging) {
       // When dragging, system creates resistance and pulls back
       // Resistance increases the further user pulls, but smoother
-      const pullBackForce = Math.min(0.8, (0.2 + pullDistanceRef.current * 0.008));
+      const pullBackForce = Math.min(0.9, (0.25 + pullDistanceRef.current * 0.01));
 
       // Apply system resistance by reducing distance gradually while dragging
       // This creates the tug-of-war feel - the system actively pulls back
       if (pullDistanceRef.current > 0) {
-        // Smoother resistance when pulling further
-        const resistanceStrength = Math.min(6, pullDistanceRef.current * 0.08);
+        // Strong resistance when pulling further - more noticeable
+        const resistanceStrength = Math.min(8, pullDistanceRef.current * 0.12);
 
-        // Add some randomness but make it smoother
-        const jerkiness = Math.random() > 0.85 ? Math.random() * 3 * deltaTime : 0;
+        // Always apply a base resistance even without randomness
+        const baseResistance = resistanceStrength * pullBackForce * deltaTime * 1.2;
 
-        // Random chance of a smoother pullback
-        const suddenPullback = Math.random() > 0.96 ? pullDistanceRef.current * 0.1 : 0;
+        // Add some random stronger pulls to simulate the system fighting back
+        const jerkiness = Math.random() > 0.75 ? Math.random() * 5 * deltaTime : 0;
 
-        // Show fight messages when pulling hard enough
-        if (pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.85) {
-          const randomMessage = FIGHT_MESSAGES[Math.floor(Math.random() * FIGHT_MESSAGES.length)];
-          setFightMessage(randomMessage);
-          setShowMessage(true);
+        // Stronger pullback chance that increases with distance
+        const suddenPullbackChance = Math.min(0.98, 0.80 + (pullDistanceRef.current / MAX_PULL_DISTANCE * 0.15));
+        const suddenPullback = Math.random() > suddenPullbackChance ?
+          pullDistanceRef.current * 0.25 : 0; // Takes 25% off when triggered
 
-          // Hide message after a short time
-          setTimeout(() => {
-            setShowMessage(false);
-          }, 800);
-        }
-
-        // Apply non-linear increased resistance with easing
+        // Apply strong resistance with easing
         setPullDistance(prev => {
-          // Calculate target position
-          const target = Math.max(0, prev - (pullBackForce * resistanceStrength * deltaTime) - jerkiness - suddenPullback);
-          // Apply easing for smoother transitions
-          const newDistance = prev * 0.8 + target * 0.2;
+          // Calculate target position with significant resistance
+          const resistanceAmount = baseResistance + jerkiness + suddenPullback;
+          const target = Math.max(0, prev - resistanceAmount);
+
+          // Blend for smoother transition, but keep resistance noticeable
+          const newDistance = prev * 0.7 + target * 0.3;
           pullDistanceRef.current = newDistance;
+
+          // Show fight messages when pulling hard enough
+          if (resistanceAmount > 5 && prev > MESSAGE_THRESHOLD && Math.random() > 0.85) {
+            const randomMessage = FIGHT_MESSAGES[Math.floor(Math.random() * FIGHT_MESSAGES.length)];
+            setFightMessage(randomMessage);
+            setShowMessage(true);
+
+            setTimeout(() => {
+              setShowMessage(false);
+            }, 800);
+          }
+
           return newDistance;
         });
 
-        // If user is pulling slowly, occasionally "snap back" with smoother transition
-        if (Math.abs(pullVelocityRef.current) < 1.5 && Math.random() > 0.9) {
+        // Continuous pullback even without randomness - ensures tug-of-war always happens
+        if (pullVelocityRef.current > 0) {
+          // If user is pulling, apply even stronger resistance
+          const continuousPullback = pullDistanceRef.current * 0.06 * deltaTime;
           setPullDistance(prev => {
-            // Smoother transition with easing
-            const target = prev * 0.8; // Remove 20% smoothly
-            const newDistance = prev * 0.85 + target * 0.15;
-            pullDistanceRef.current = newDistance;
-            return newDistance;
+            const newDist = Math.max(0, prev - continuousPullback);
+            pullDistanceRef.current = newDist;
+            return newDist;
           });
         }
       }
@@ -206,7 +213,7 @@ function App() {
     }
   };
 
-  // Handle drag movement with smoother transitions
+  // Handle drag movement with smoother transitions and stronger resistance
   const handleDragMove = (clientY: number) => {
     if (!isDragging || isRefreshing) return;
 
@@ -219,37 +226,38 @@ function App() {
     lastDragYRef.current = clientY;
 
     if (dragY > 0) {
-      // Progressive resistance with smoother accumulation
-      resistanceRef.current += 0.002 * Math.min(1, dragY / 200);
+      // Progressive resistance with stronger accumulation
+      resistanceRef.current += 0.003 * Math.min(1, dragY / 150);
 
-      // Combined resistance factors with smoother curve:
-      const baseResistance = 0.15; // Lower base for smoother start
-      const accumulatedResistance = Math.min(0.5, resistanceRef.current); // Cap accumulated
-      const distanceResistance = Math.min(0.5, pullDistanceRef.current / MAX_PULL_DISTANCE * 0.6);
+      // Combined resistance factors with stronger curve:
+      const baseResistance = 0.2; // Higher base resistance
+      const accumulatedResistance = Math.min(0.6, resistanceRef.current * 1.2); // Stronger accumulation
+      const distanceResistance = Math.min(0.6, pullDistanceRef.current / MAX_PULL_DISTANCE * 0.8); // Stronger distance factor
 
-      // Apply smooth combined resistance with diminishing returns
-      const resistance = Math.min(0.92,
+      // Apply combined resistance with diminishing returns - make it stronger
+      const resistance = Math.min(0.95,
         baseResistance +
         accumulatedResistance +
         distanceResistance
       );
 
-      // Calculate raw new distance
-      const rawNewDistance = dragY * Math.pow(Math.max(0.08, 1 - resistance), 1.1);
+      // Calculate raw new distance with stronger resistance curve
+      const dragFactor = Math.pow(Math.max(0.05, 1 - resistance), 1.3); // More aggressive curve
+      const rawNewDistance = dragY * dragFactor;
 
-      // Apply easing for smoother transitions
+      // Apply easing but with less blending to make resistance more noticeable
       setPullDistance(prev => {
-        // Blend between previous and new value
-        const newDistance = Math.min(MAX_PULL_DISTANCE, prev * 0.6 + rawNewDistance * 0.4);
+        // Less blending means more immediate response to resistance
+        const newDistance = Math.min(MAX_PULL_DISTANCE, prev * 0.4 + rawNewDistance * 0.6);
         pullDistanceRef.current = newDistance;
         return newDistance;
       });
 
-      // Occasionally make the feed "snap back" but smoother
-      if (Math.random() > 0.95) {
+      // More frequent snapbacks for tug-of-war feel
+      if (Math.random() > 0.92) {
         setPullDistance(prev => {
-          // Apply smaller, smoother snapback
-          const snapAmount = Math.min(10, prev * 0.08);
+          // Apply stronger snapback
+          const snapAmount = Math.min(20, prev * 0.15); // Take up to 15% off
           const newDist = Math.max(0, prev - snapAmount);
           pullDistanceRef.current = newDist;
           return newDist;
