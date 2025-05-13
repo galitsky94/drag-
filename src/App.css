@@ -1,0 +1,67 @@
+/* Ensures scrolling is smooth */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: black;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain; /* Important for pull-to-refresh */
+  overflow-x: hidden;
+}
+
+/* X.com spinner animation */
+@keyframes spinnerRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* When refreshing, the container itself rotates */
+.spinner-container {
+  animation: spinnerRotate 1.5s linear infinite;
+}
+
+/* Twitter-like spinner styles */
+.twitter-spinner {
+  animation: spinnerRotate 1.5s linear infinite;
+  border: 3px solid transparent;
+  border-top-color: #1DA1F2;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+/* Logo animation */
+@keyframes logoSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.logo-spin:hover {
+  animation: logoSpin 2s infinite linear;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 2px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+}
+
+/* Handle text selection */
+::selection {
+  background-color: rgba(29, 161, 242, 0.2);
+  color: #fff;
+}
