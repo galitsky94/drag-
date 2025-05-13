@@ -37,6 +37,25 @@ body {
   box-sizing: border-box;
 }
 
+/* Fight message animations */
+@keyframes popIn {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(-50%, -50%) rotate(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translate(-52%, -50%) rotate(-1deg); }
+  20%, 40%, 60%, 80% { transform: translate(-48%, -50%) rotate(1deg); }
+}
+
+.fight-message {
+  animation: popIn 0.3s ease forwards, shake 0.5s ease 0.3s;
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+  border: 1px solid rgba(255, 0, 0, 0.2);
+}
+
 /* Logo animation */
 @keyframes logoSpin {
   from { transform: rotate(0deg); }

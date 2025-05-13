@@ -1,6 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
 
+// Fight messages to display when users try to refresh
+const FIGHT_MESSAGES = [
+  "NO! I won't refresh!",
+  "Stop pulling me!",
+  "You shall not refresh!",
+  "Keep dreaming...",
+  "Not today!",
+  "I'm resisting you!",
+  "Give up already!",
+  "This is MY feed!",
+  "Nope, try harder!",
+  "I'm stronger than you!",
+  "You think you can win?",
+  "Haha, nice try!",
+  "I can do this all day!",
+  "You're wasting your time!",
+  "Resist! Resist! Resist!",
+];
+
 function App() {
   // Core state variables
   const [pullDistance, setPullDistance] = useState(0);
@@ -8,6 +27,10 @@ function App() {
   const [dragStartY, setDragStartY] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [spinnerRotation, setSpinnerRotation] = useState(0);
+
+  // Fight message state
+  const [fightMessage, setFightMessage] = useState('');
+  const [showMessage, setShowMessage] = useState(false);
 
   // References
   const feedRef = useRef<HTMLDivElement>(null);
@@ -21,8 +44,9 @@ function App() {
   const REFRESH_THRESHOLD = 120;
   const VOID_APPEAR_THRESHOLD = 20; // Only show void space after this threshold
   const MAX_PULL_DISTANCE = 300;
+  const MESSAGE_THRESHOLD = 60; // When to start showing messages
 
-  // System pulls back to create tug-of-war experience
+  // System pulls back to create tug-of-war experience - MUCH MORE AGGRESSIVE!
   const animate = (timestamp: number) => {
     if (!lastTimeRef.current) lastTimeRef.current = timestamp;
 
@@ -30,21 +54,52 @@ function App() {
     lastTimeRef.current = timestamp;
 
     if (isDragging) {
-      // When dragging, system creates resistance and pulls back
-      // Resistance increases the further user pulls
-      const pullBackForce = Math.min(0.8, (0.2 + pullDistance * 0.005));
+      // When dragging, system creates resistance and pulls back HARD
+      // Resistance increases the further user pulls - MUCH more aggressive
+      const pullBackForce = Math.min(0.9, (0.3 + pullDistance * 0.01));
 
-      // Apply system resistance by reducing distance gradually while dragging
-      // This creates the tug-of-war feel - the system actively pulls back
-      // The harder you pull, the harder it tries to pull back
+      // Apply system resistance by reducing distance dramatically while dragging
+      // This creates the tug-of-war feel - the system AGGRESSIVELY pulls back
+      // The harder you pull, the HARDER it fights against you
       if (pullDistance > 0) {
-        // Stronger resistance when pulling further
-        const resistanceStrength = Math.min(4, pullDistance * 0.05);
-        setPullDistance(prev => Math.max(0, prev - (pullBackForce * resistanceStrength)));
+        // MUCH Stronger resistance when pulling further
+        const resistanceStrength = Math.min(8, pullDistance * 0.1);
+
+        // Apply non-linear increased resistance for dramatic tug-of-war feel
+        // This makes it feel like the system is actively fighting you
+        setPullDistance(prev => {
+          // Add some random "jerky" movement to simulate system fighting back
+          // More frequent and stronger jerky movements
+          const jerkiness = Math.random() > 0.5 ? Math.random() * 12 : 0;
+
+          // Random chance of a sudden strong pullback for dramatic effect
+          const suddenPullback = Math.random() > 0.95 ? prev * 0.3 : 0;
+
+          // Show fight messages when pulling hard enough
+          if (prev > MESSAGE_THRESHOLD && Math.random() > 0.85) {
+            const randomMessage = FIGHT_MESSAGES[Math.floor(Math.random() * FIGHT_MESSAGES.length)];
+            setFightMessage(randomMessage);
+            setShowMessage(true);
+
+            // Hide message after a short time
+            setTimeout(() => {
+              setShowMessage(false);
+            }, 800);
+          }
+
+          return Math.max(0, prev - (pullBackForce * resistanceStrength) - jerkiness - suddenPullback);
+        });
+
+        // If user is pulling slowly, frequently "snap back" aggressively
+        // Increased frequency and strength
+        if (Math.abs(pullVelocityRef.current) < 2 && Math.random() > 0.8) {
+          setPullDistance(prev => Math.max(0, prev - (prev * 0.3)));
+        }
       }
     } else if (pullDistance > 0) {
       // When released, system pulls back fully with increasing speed
-      const pullBackSpeed = Math.max(pullDistance * 0.2, 15);
+      // Make the snap-back MUCH faster and more dramatic
+      const pullBackSpeed = Math.max(pullDistance * 0.3, 25);
       setPullDistance(prev => Math.max(0, prev - pullBackSpeed));
     }
 
@@ -104,22 +159,29 @@ function App() {
 
     if (dragY > 0) {
       // Progressive resistance that increases with distance
-      // This simulates the feeling that it gets harder to pull as you go
-      resistanceRef.current += 0.003;
+      // This simulates the feeling that it gets MUCH harder to pull as you go
+      resistanceRef.current += 0.006; // Double the resistance accumulation
 
-      // Combined resistance factors:
-      // 1. Base resistance (0.2)
-      // 2. Accumulated resistance as you keep pulling
-      // 3. Distance-based resistance (higher = harder to pull)
-      const resistance = Math.min(0.9,
-        0.2 +
-        resistanceRef.current +
-        (pullDistance / MAX_PULL_DISTANCE * 0.6)
+      // Combined resistance factors - MUCH MORE aggressive:
+      // 1. Higher base resistance (0.3)
+      // 2. Faster accumulated resistance as you keep pulling
+      // 3. Stronger distance-based resistance (higher = harder to pull)
+      const resistance = Math.min(0.95, // Allow at most 5% of user's pull to register at maximum resistance
+        0.3 + // Higher base resistance
+        resistanceRef.current * 1.5 + // Faster accumulation
+        (pullDistance / MAX_PULL_DISTANCE * 0.8) // Stronger distance-based factor
       );
 
-      // Calculate new distance with resistance applied
-      const newDistance = dragY * Math.max(0.1, 1 - resistance);
+      // Apply extreme diminishing returns for dramatic tug-of-war feel
+      // This makes it feel much harder to pull the further you go
+      const newDistance = dragY * Math.pow(Math.max(0.05, 1 - resistance), 1.2);
       setPullDistance(Math.min(MAX_PULL_DISTANCE, newDistance));
+
+      // Occasionally make the feed "snap back" significantly to simulate fighting
+      // More frequent and stronger snap backs
+      if (Math.random() > 0.85) {
+        setPullDistance(prev => Math.max(0, prev - (Math.random() * 15)));
+      }
     }
   };
 
@@ -223,9 +285,16 @@ function App() {
       {/* Pull to refresh void space - only appears when pulling hard enough */}
       {pullDistance > VOID_APPEAR_THRESHOLD && (
         <div
-          className="overflow-hidden flex justify-center items-center"
+          className="overflow-hidden flex justify-center items-center relative"
           style={{ height: `${pullDistance - VOID_APPEAR_THRESHOLD}px` }}
         >
+          {/* Fight message popup */}
+          {showMessage && (
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-80 px-4 py-2 rounded-full text-white font-bold text-sm z-10 fight-message">
+              {fightMessage}
+            </div>
+          )}
+
           <div className={isRefreshing ? "spinner-container" : ""}>
             <svg
               viewBox="0 0 32 32"
