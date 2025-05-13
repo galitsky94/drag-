@@ -291,7 +291,7 @@ function App() {
   return (
     <div className="min-h-screen bg-black">
       {/* Header */}
-      <header className="flex items-center justify-between py-3 px-4">
+      <header className="flex items-center justify-between py-3 px-4 sticky top-0 z-10 bg-black">
         <div className="w-8 h-8">
           <img
             src="https://abs.twimg.com/responsive-web/client-web/icon-default-profile-badge.741259e6.png"
@@ -308,8 +308,8 @@ function App() {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-800">
+      {/* Tabs - ALWAYS stays at the top, even when pulling */}
+      <div className="flex border-b border-gray-800 sticky top-[62px] z-10 bg-black">
         <div className="flex-1 py-4 text-center border-b-2 border-blue-500 font-bold text-white">
           For you
         </div>
@@ -318,204 +318,214 @@ function App() {
         </div>
       </div>
 
-      {/* Pull to refresh void space - only appears when pulling hard enough */}
-      {pullDistance > VOID_APPEAR_THRESHOLD && (
-        <div
-          className="overflow-hidden flex justify-center items-center relative"
-          style={{ height: `${pullDistance - VOID_APPEAR_THRESHOLD}px` }}
-        >
-          {/* Fight message popup */}
-          {showMessage && (
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-80 px-4 py-2 rounded-full text-white font-bold text-sm z-10 fight-message">
-              {fightMessage}
-            </div>
-          )}
+      {/* Container for feed and pull area */}
+      <div className="relative">
+        {/* Pull to refresh void space - only appears when pulling hard enough */}
+        {pullDistance > VOID_APPEAR_THRESHOLD && (
+          <div
+            className="overflow-hidden flex justify-center items-center relative"
+            style={{ height: `${pullDistance - VOID_APPEAR_THRESHOLD}px` }}
+          >
+            {/* Fight message popup */}
+            {showMessage && (
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-80 px-4 py-2 rounded-full text-white font-bold text-sm z-10 fight-message">
+                {fightMessage}
+              </div>
+            )}
 
-          <div className={isRefreshing ? "spinner-container" : ""}>
-            <svg
-              viewBox="0 0 32 32"
-              className="w-7 h-7 text-[#1D9BF0] fill-current"
-              style={{
-                transform: isRefreshing ? 'none' : `rotate(${spinnerRotation}deg)`,
-                opacity: Math.min(1, (pullDistance - VOID_APPEAR_THRESHOLD) / (REFRESH_THRESHOLD - VOID_APPEAR_THRESHOLD))
-              }}
-            >
-              <path d="M16 0 A16 16 0 0 0 16 32 A16 16 0 0 0 16 0 M16 4 A12 12 0 0 1 16 28 A12 12 0 0 1 16 4" fill="#2a2a2a"/>
-              <path d="M16 0 A16 16 0 0 1 32 16 L28 16 A12 12 0 0 0 16 4z" fill="#1D9BF0" />
-            </svg>
+            <div className={isRefreshing ? "spinner-container" : ""}>
+              {/* X's gray spinner design */}
+              <svg
+                className="w-8 h-8 text-gray-500"
+                viewBox="0 0 32 32"
+                style={{
+                  transform: isRefreshing ? 'none' : `rotate(${spinnerRotation}deg)`,
+                  opacity: Math.min(1, (pullDistance - VOID_APPEAR_THRESHOLD) / (REFRESH_THRESHOLD - VOID_APPEAR_THRESHOLD))
+                }}
+              >
+                <circle cx="16" cy="16" r="14" fill="none" stroke="#333" strokeWidth="4" />
+                <path
+                  d="M16,2 A14,14 0 0,1 30,16"
+                  fill="none"
+                  stroke="#888"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Feed content */}
-      <div
-        ref={feedRef}
-        className="feed-container overflow-y-auto"
-        style={{ height: 'calc(100vh - 106px)' }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-      >
-        {/* Post 1 */}
-        <div className="border-b border-gray-800 p-4">
-          <div className="flex">
-            {/* Avatar */}
-            <div className="mr-3">
-              <img
-                src="https://pbs.twimg.com/profile_images/1683325380441128960/yRsRRjGO_400x400.jpg"
-                className="w-10 h-10 rounded-full"
-                alt="Profile"
-              />
-            </div>
-
-            {/* Content */}
-            <div className="flex-1">
-              {/* Header */}
-              <div className="flex items-center">
-                <span className="font-bold text-white">Twitter</span>
-                <svg className="w-4 h-4 text-[#1D9BF0] fill-current ml-1" viewBox="0 0 24 24">
-                  <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-.115-.094-2.415-2.415c-.293-.293-.293-.768 0-1.06s.768-.294 1.06 0l1.77 1.767 3.825-5.74c.23-.345.696-.436 1.04-.207.346.23.44.696.21 1.04z" />
-                </svg>
-                <span className="ml-1 text-gray-500">@Twitter · 2h</span>
-                <div className="ml-auto">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 text-gray-500 fill-current">
-                    <g><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 2c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm7 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path></g>
-                  </svg>
-                </div>
-              </div>
-
-              {/* Post text */}
-              <div className="mt-1 mb-3 text-white">
-                This is what happens when you pull to refresh on Twitter. The system fights back to create a tug-of-war experience!
-              </div>
-
-              {/* Post image */}
-              <div className="rounded-2xl overflow-hidden mb-3 border border-gray-800">
+        {/* Feed content */}
+        <div
+          ref={feedRef}
+          className="feed-container overflow-y-auto"
+          style={{ height: 'calc(100vh - 106px)' }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+        >
+          {/* Post 1 */}
+          <div className="border-b border-gray-800 p-4">
+            <div className="flex">
+              {/* Avatar */}
+              <div className="mr-3">
                 <img
-                  src="https://pbs.twimg.com/media/GGuyhEDXUAA7hmR?format=jpg&name=900x900"
-                  alt="Post"
-                  className="w-full h-auto"
+                  src="https://pbs.twimg.com/profile_images/1683325380441128960/yRsRRjGO_400x400.jpg"
+                  className="w-10 h-10 rounded-full"
+                  alt="Profile"
                 />
               </div>
 
-              {/* Actions */}
-              <div className="flex justify-between text-gray-500">
-                <div className="flex items-center group">
-                  <div className="w-9 h-9 flex items-center justify-center group-hover:bg-blue-900/20 rounded-full group-hover:text-blue-500">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                      <g><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></g>
-                    </svg>
-                  </div>
-                  <span>482</span>
-                </div>
-
-                <div className="flex items-center group">
-                  <div className="w-9 h-9 flex items-center justify-center group-hover:bg-green-900/20 rounded-full group-hover:text-green-500">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                      <g><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></g>
-                    </svg>
-                  </div>
-                  <span>2,893</span>
-                </div>
-
-                <div className="flex items-center group">
-                  <div className="w-9 h-9 flex items-center justify-center group-hover:bg-pink-900/20 rounded-full group-hover:text-pink-500">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                      <g><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"></path></g>
-                    </svg>
-                  </div>
-                  <span>13.5K</span>
-                </div>
-
-                <div className="flex items-center group">
-                  <div className="w-9 h-9 flex items-center justify-center group-hover:bg-blue-900/20 rounded-full group-hover:text-blue-500">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                      <g><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4zm9.248 0v-7h2v7h-2z"></path></g>
-                    </svg>
-                  </div>
-                  <span>315K</span>
-                </div>
-
+              {/* Content */}
+              <div className="flex-1">
+                {/* Header */}
                 <div className="flex items-center">
-                  <div className="w-9 h-9 flex items-center justify-center hover:bg-blue-900/20 rounded-full">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current text-gray-500">
-                      <g><path d="M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59zM21 15l-.02 3.51c0 1.38-1.12 2.49-2.5 2.49H5.5C4.11 21 3 19.88 3 18.5V15h2v3.5c0 .28.22.5.5.5h12.98c.28 0 .5-.22.5-.5L19 15h2z"></path></g>
+                  <span className="font-bold text-white">Twitter</span>
+                  <svg className="w-4 h-4 text-[#1D9BF0] fill-current ml-1" viewBox="0 0 24 24">
+                    <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-.115-.094-2.415-2.415c-.293-.293-.293-.768 0-1.06s.768-.294 1.06 0l1.77 1.767 3.825-5.74c.23-.345.696-.436 1.04-.207.346.23.44.696.21 1.04z" />
+                  </svg>
+                  <span className="ml-1 text-gray-500">@Twitter · 2h</span>
+                  <div className="ml-auto">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-gray-500 fill-current">
+                      <g><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 2c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm7 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path></g>
                     </svg>
+                  </div>
+                </div>
+
+                {/* Post text */}
+                <div className="mt-1 mb-3 text-white">
+                  This is what happens when you pull to refresh on Twitter. The system fights back to create a tug-of-war experience!
+                </div>
+
+                {/* Post image */}
+                <div className="rounded-2xl overflow-hidden mb-3 border border-gray-800">
+                  <img
+                    src="https://pbs.twimg.com/media/GGuyhEDXUAA7hmR?format=jpg&name=900x900"
+                    alt="Post"
+                    className="w-full h-auto"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex justify-between text-gray-500">
+                  <div className="flex items-center group">
+                    <div className="w-9 h-9 flex items-center justify-center group-hover:bg-blue-900/20 rounded-full group-hover:text-blue-500">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                        <g><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></g>
+                      </svg>
+                    </div>
+                    <span>482</span>
+                  </div>
+
+                  <div className="flex items-center group">
+                    <div className="w-9 h-9 flex items-center justify-center group-hover:bg-green-900/20 rounded-full group-hover:text-green-500">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                        <g><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></g>
+                      </svg>
+                    </div>
+                    <span>2,893</span>
+                  </div>
+
+                  <div className="flex items-center group">
+                    <div className="w-9 h-9 flex items-center justify-center group-hover:bg-pink-900/20 rounded-full group-hover:text-pink-500">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                        <g><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"></path></g>
+                      </svg>
+                    </div>
+                    <span>13.5K</span>
+                  </div>
+
+                  <div className="flex items-center group">
+                    <div className="w-9 h-9 flex items-center justify-center group-hover:bg-blue-900/20 rounded-full group-hover:text-blue-500">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                        <g><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4zm9.248 0v-7h2v7h-2z"></path></g>
+                      </svg>
+                    </div>
+                    <span>315K</span>
+                  </div>
+
+                  <div className="flex items-center">
+                    <div className="w-9 h-9 flex items-center justify-center hover:bg-blue-900/20 rounded-full">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current text-gray-500">
+                        <g><path d="M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59zM21 15l-.02 3.51c0 1.38-1.12 2.49-2.5 2.49H5.5C4.11 21 3 19.88 3 18.5V15h2v3.5c0 .28.22.5.5.5h12.98c.28 0 .5-.22.5-.5L19 15h2z"></path></g>
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Post 2 */}
-        <div className="border-b border-gray-800 p-4">
-          <div className="flex">
-            <div className="mr-3">
-              <img
-                src="https://pbs.twimg.com/profile_images/1683325380441128960/yRsRRjGO_400x400.jpg"
-                className="w-10 h-10 rounded-full"
-                alt="Profile"
-              />
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center">
-                <span className="font-bold text-white">Twitter</span>
-                <svg className="w-4 h-4 text-[#1D9BF0] fill-current ml-1" viewBox="0 0 24 24">
-                  <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-.115-.094-2.415-2.415c-.293-.293-.293-.768 0-1.06s.768-.294 1.06 0l1.77 1.767 3.825-5.74c.23-.345.696-.436 1.04-.207.346.23.44.696.21 1.04z" />
-                </svg>
-                <span className="ml-1 text-gray-500">@Twitter · 5h</span>
-                <div className="ml-auto">
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 text-gray-500 fill-current">
-                    <g><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 2c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm7 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path></g>
+          {/* Post 2 */}
+          <div className="border-b border-gray-800 p-4">
+            <div className="flex">
+              <div className="mr-3">
+                <img
+                  src="https://pbs.twimg.com/profile_images/1683325380441128960/yRsRRjGO_400x400.jpg"
+                  className="w-10 h-10 rounded-full"
+                  alt="Profile"
+                />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center">
+                  <span className="font-bold text-white">Twitter</span>
+                  <svg className="w-4 h-4 text-[#1D9BF0] fill-current ml-1" viewBox="0 0 24 24">
+                    <path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.998-3.818-3.998-.47 0-.92.084-1.336.25C14.818 2.415 13.51 1.5 12 1.5s-2.816.917-3.437 2.25c-.415-.165-.866-.25-1.336-.25-2.11 0-3.818 1.79-3.818 4 0 .494.083.964.237 1.4-1.272.65-2.147 2.018-2.147 3.6 0 1.495.782 2.798 1.942 3.486-.02.17-.032.34-.032.514 0 2.21 1.708 4 3.818 4 .47 0 .92-.086 1.335-.25.62 1.334 1.926 2.25 3.437 2.25 1.512 0 2.818-.916 3.437-2.25.415.163.865.248 1.336.248 2.11 0 3.818-1.79 3.818-4 0-.174-.012-.344-.033-.513 1.158-.687 1.943-1.99 1.943-3.484zm-6.616-3.334l-4.334 6.5c-.145.217-.382.334-.625.334-.143 0-.288-.04-.416-.126l-.115-.094-2.415-2.415c-.293-.293-.293-.768 0-1.06s.768-.294 1.06 0l1.77 1.767 3.825-5.74c.23-.345.696-.436 1.04-.207.346.23.44.696.21 1.04z" />
                   </svg>
-                </div>
-              </div>
-              <div className="mt-1 mb-3 text-white">
-                Pull down to refresh this feed - but be prepared for a fight! The further you pull, the harder it gets.
-              </div>
-              <div className="flex justify-between text-gray-500">
-                <div className="flex items-center">
-                  <div className="w-9 h-9 flex items-center justify-center hover:bg-blue-900/20 rounded-full hover:text-blue-500">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                      <g><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></g>
+                  <span className="ml-1 text-gray-500">@Twitter · 5h</span>
+                  <div className="ml-auto">
+                    <svg viewBox="0 0 24 24" className="w-5 h-5 text-gray-500 fill-current">
+                      <g><path d="M3 12c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm9 2c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm7 0c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"></path></g>
                     </svg>
                   </div>
-                  <span>176</span>
                 </div>
-                <div className="flex items-center">
-                  <div className="w-9 h-9 flex items-center justify-center hover:bg-green-900/20 rounded-full hover:text-green-500">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                      <g><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></g>
-                    </svg>
+                <div className="mt-1 mb-3 text-white">
+                  Pull down to refresh this feed - but be prepared for a fight! The further you pull, the harder it gets.
+                </div>
+                <div className="flex justify-between text-gray-500">
+                  <div className="flex items-center">
+                    <div className="w-9 h-9 flex items-center justify-center hover:bg-blue-900/20 rounded-full hover:text-blue-500">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                        <g><path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path></g>
+                      </svg>
+                    </div>
+                    <span>176</span>
                   </div>
-                  <span>1,452</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-9 h-9 flex items-center justify-center hover:bg-pink-900/20 rounded-full hover:text-pink-500">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                      <g><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"></path></g>
-                    </svg>
+                  <div className="flex items-center">
+                    <div className="w-9 h-9 flex items-center justify-center hover:bg-green-900/20 rounded-full hover:text-green-500">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                        <g><path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path></g>
+                      </svg>
+                    </div>
+                    <span>1,452</span>
                   </div>
-                  <span>8,741</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-9 h-9 flex items-center justify-center hover:bg-blue-900/20 rounded-full hover:text-blue-500">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-                      <g><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4zm9.248 0v-7h2v7h-2z"></path></g>
-                    </svg>
+                  <div className="flex items-center">
+                    <div className="w-9 h-9 flex items-center justify-center hover:bg-pink-900/20 rounded-full hover:text-pink-500">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                        <g><path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"></path></g>
+                      </svg>
+                    </div>
+                    <span>8,741</span>
                   </div>
-                  <span>203K</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-9 h-9 flex items-center justify-center hover:bg-blue-900/20 rounded-full">
-                    <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current text-gray-500">
-                      <g><path d="M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59zM21 15l-.02 3.51c0 1.38-1.12 2.49-2.5 2.49H5.5C4.11 21 3 19.88 3 18.5V15h2v3.5c0 .28.22.5.5.5h12.98c.28 0 .5-.22.5-.5L19 15h2z"></path></g>
-                    </svg>
+                  <div className="flex items-center">
+                    <div className="w-9 h-9 flex items-center justify-center hover:bg-blue-900/20 rounded-full hover:text-blue-500">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
+                        <g><path d="M8.75 21V3h2v18h-2zM18 21V8.5h2V21h-2zM4 21l.004-10h2L6 21H4zm9.248 0v-7h2v7h-2z"></path></g>
+                      </svg>
+                    </div>
+                    <span>203K</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className="w-9 h-9 flex items-center justify-center hover:bg-blue-900/20 rounded-full">
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current text-gray-500">
+                        <g><path d="M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59zM21 15l-.02 3.51c0 1.38-1.12 2.49-2.5 2.49H5.5C4.11 21 3 19.88 3 18.5V15h2v3.5c0 .28.22.5.5.5h12.98c.28 0 .5-.22.5-.5L19 15h2z"></path></g>
+                      </svg>
+                    </div>
                   </div>
                 </div>
               </div>
