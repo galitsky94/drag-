@@ -31,22 +31,27 @@ html, body {
 
 /* X.com spinner animation */
 @keyframes spinnerRotate {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
-/* When refreshing, the container itself rotates */
+/* When refreshing, the container itself rotates with silky smooth animation */
 .spinner-container {
   animation: spinnerRotate 1.5s linear infinite;
-  will-change: transform; /* Hardware acceleration for smoother animation */
-  transform: translateZ(0); /* Force GPU rendering */
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
-/* X's spinner animation - smoother transitions */
+/* X's spinner animation - perfectly smooth transitions */
 .x-spinner {
-  transition: transform 0.1s ease, opacity 0.2s ease;
+  transition: transform 0.08s cubic-bezier(0.4, 0.0, 0.2, 1),
+              opacity 0.15s cubic-bezier(0.4, 0.0, 0.2, 1);
   will-change: transform, opacity;
   transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
 }
 
 /* Twitter-like spinner styles */
