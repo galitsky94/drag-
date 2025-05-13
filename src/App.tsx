@@ -56,9 +56,26 @@ function App() {
   const VOID_APPEAR_THRESHOLD = 20; // Only show void space after this threshold
   const MAX_PULL_DISTANCE = 300;
   const MESSAGE_THRESHOLD = 60; // When to start showing messages
-  const BASE_RESISTANCE = 0.4; // Increased from 0.2
-  const SPEED_RESISTANCE_FACTOR = 0.8; // Increased from 0.5
-  const POSITION_RESISTANCE_FACTOR = 0.08; // Increased from 0.05
+  const BASE_RESISTANCE = 0.5; // Increased from 0.4
+  const SPEED_RESISTANCE_FACTOR = 1.2; // Increased from 0.8
+  const POSITION_RESISTANCE_FACTOR = 0.12; // Increased from 0.08
+
+  // Initialize the animation frame on component mount
+  useEffect(() => {
+    // Start the animation loop when component mounts
+    if (!animationRef.current) {
+      animationRef.current = requestAnimationFrame(animate);
+    }
+
+    // Cleanup animation on unmount
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+    // eslint-disable-next-line
+  }, []);
 
   // System creates REAL-TIME resistance proportional to drag speed
   const animate = (timestamp: number) => {
@@ -113,15 +130,6 @@ function App() {
     animationRef.current = requestAnimationFrame(animate);
   };
 
-  // Cleanup animation on unmount
-  useEffect(() => {
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    };
-  }, []);
-
   // Prevent native pull-to-refresh spinner by stopping touchmove default on entire document when dragging
   useEffect(() => {
     const preventDefaultOnDrag = (e: TouchEvent) => {
@@ -171,10 +179,6 @@ function App() {
       resistanceRef.current = 0;
       pullVelocityRef.current = 0;
       currentDragSpeedRef.current = 0;
-
-      if (!animationRef.current) {
-        animationRef.current = requestAnimationFrame(animate);
-      }
     }
   };
 
@@ -198,22 +202,22 @@ function App() {
 
     if (dragY > 0) {
       // Calculate base resistance that smoothly increases with distance (increased base and factor)
-      let baseResistance = BASE_RESISTANCE + (pullDistanceRef.current / MAX_PULL_DISTANCE) * 0.7;
+      let baseResistance = BASE_RESISTANCE + (pullDistanceRef.current / MAX_PULL_DISTANCE) * 0.9; // Increased from 0.7
 
       // Calculate speed-based resistance - increases dramatically with faster pulling
       // This creates the "fighting back harder when you pull harder" effect
       let speedResistance = 0;
-      if (currentDragSpeedRef.current > 30) { // Lowered threshold from 50 to 30
-        // Only add strong resistance when pulling down fast (>30px/s)
-        speedResistance = Math.min(0.8, (currentDragSpeedRef.current - 30) / 600); // Increased from 0.6
+      if (currentDragSpeedRef.current > 20) { // Lowered threshold from 30 to 20
+        // Only add strong resistance when pulling down fast (>20px/s)
+        speedResistance = Math.min(0.9, (currentDragSpeedRef.current - 20) / 500); // Increased from 0.8
       }
 
       // The harder you pull (higher speed), the more resistance you get
-      const totalResistance = Math.min(0.97, baseResistance + speedResistance); // Increased from 0.95
+      const totalResistance = Math.min(0.98, baseResistance + speedResistance); // Increased from 0.97
 
-      // Multi-finger reduces resistance, but less than before
+      // Multi-finger reduces resistance but much less than before
       const effectiveResistance = isMultiTouch ?
-        totalResistance * 0.7 : // 30% easier with multiple fingers (instead of 40%)
+        totalResistance * 0.8 : // 20% easier with multiple fingers (decreased from 30%)
         totalResistance;
 
       // Apply the resistance to the drag movement
