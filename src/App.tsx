@@ -55,28 +55,31 @@ function App() {
   const MAX_PULL_DISTANCE = 300;
   const MESSAGE_THRESHOLD = 60; // When to start showing messages
 
-  // System creates smooth, predictable, and VERY STRONG resistance
+  // System creates VERY STRONG, direct resistance
   const animate = (timestamp: number) => {
     if (!lastTimeRef.current) lastTimeRef.current = timestamp;
     const delta = timestamp - lastTimeRef.current;
-    const smoothDelta = delta / 16.667; // Normalize to 60fps
+    const smoothDelta = Math.max(1, delta / 16.667); // Ensure smoothDelta is at least 1
     lastTimeRef.current = timestamp;
 
     if (isDragging) {
-      // System actively pulls back based on how far it's been dragged - MUCH STRONGER
-      if (pullDistanceRef.current > 3) { // Start pulling back almost immediately and very strongly
-        // Resistance force increases very steeply with pullDistance
-        const pullBackStrength = 0.004 * Math.pow(pullDistanceRef.current, 1.75);
-        const resistanceForce = pullBackStrength * smoothDelta * 2.2; // Dramatically stronger pull-back
+      // System actively pulls back - EXTREMELY STRONG
+      if (pullDistanceRef.current > 1) { // Start pulling back immediately
+        // Very direct and powerful pull-back force
+        const pullBackForce = 0.15 * pullDistanceRef.current * pullDistanceRef.current * 0.005;
+        let resistanceAmount = pullBackForce * smoothDelta;
+
+        // Add a more consistent strong resistance
+        resistanceAmount += Math.max(0.5, pullDistanceRef.current * 0.03) * smoothDelta;
 
         setPullDistance(prev => {
-          const newValue = Math.max(0, prev - resistanceForce);
+          const newValue = Math.max(0, prev - resistanceAmount);
           pullDistanceRef.current = newValue;
           return newValue;
         });
 
-        // Show fight messages when resistance is very high
-        if (resistanceForce > 2.0 && pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.90) {
+        // Show fight messages when resistance is extreme
+        if (resistanceAmount > 3.0 && pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.85) {
           const randomMessage = FIGHT_MESSAGES[Math.floor(Math.random() * FIGHT_MESSAGES.length)];
           setFightMessage(randomMessage);
           setShowMessage(true);
@@ -84,14 +87,15 @@ function App() {
         }
       }
     } else if (pullDistanceRef.current > 0) {
-      // Smooth and quick spring-back when released
-      const releaseSpringForce = Math.max(pullDistanceRef.current * 0.25, 15) * smoothDelta; // Even faster retraction
+      // Quick spring-back
+      const releaseSpringForce = Math.max(pullDistanceRef.current * 0.30, 20) * smoothDelta;
       setPullDistance(prev => {
         const newValue = Math.max(0, prev - releaseSpringForce);
         pullDistanceRef.current = newValue;
         return newValue;
       });
     }
+    // ... (spinner and requestAnimationFrame logic remains the same)
     if (pullDistanceRef.current > VOID_APPEAR_THRESHOLD) {
       const rotationSpeed = 120 * smoothDelta;
       setSpinnerRotation(prev => (prev + rotationSpeed) % 360);
@@ -169,41 +173,36 @@ function App() {
     }
   };
 
-  // Handle drag movement with VERY AGGRESSIVE, smooth, predictable, increasing resistance
+  // Handle drag movement with EXTREMELY AGGRESSIVE and direct resistance
   const handleDragMove = (clientY: number, isMultiTouch: boolean = false) => {
     if (!isDragging || isRefreshing) return;
 
-    const dragY = clientY - dragStartY; // How much user tried to drag in this event
+    const dragY = clientY - dragStartY;
 
     if (dragY > 0) {
-      // Base resistance is now very high for single finger
-      let resistanceFactor = 0.45; // Significantly increased initial resistance
-      if (pullDistanceRef.current > 10) { // Start ramping up serious resistance very early
-        const distanceEffect = (pullDistanceRef.current - 10) / (MAX_PULL_DISTANCE - 10);
-        // Dramatically stronger ramp-up with a higher power
-        resistanceFactor += Math.pow(distanceEffect, 2.2) * 0.50; // Max additional 0.50 (total 0.95), very steep curve
+      // Extremely high resistance factor that ramps up very fast
+      let resistanceFactor = 0.65; // Start with very high resistance
+      if (pullDistanceRef.current > 5) { // Ramp up almost immediately
+        // Exponential increase in resistance
+        resistanceFactor += Math.pow(pullDistanceRef.current / MAX_PULL_DISTANCE, 0.5) * 0.33;
       }
+      resistanceFactor = Math.min(0.99, resistanceFactor); // Cap at 99% - almost impossible to pull further
 
-      // If multi-touch, reduce resistance by a smaller factor (single finger is very hard now)
+      // Multi-touch provides a small amount of help against the extreme resistance
       if (isMultiTouch) {
-        resistanceFactor *= 0.7; // Multi-touch makes it 30% easier
+        resistanceFactor *= 0.85; // Multi-touch makes it 15% easier, still very hard
       }
 
-      resistanceFactor = Math.min(0.98, resistanceFactor); // Cap resistance at 98%
-
-      // How much actual movement is allowed after resistance
       const effectiveDragAmount = dragY * (1 - resistanceFactor);
 
       setPullDistance(prev => {
-        // Allow a bit more of the effectiveDrag to translate into movement if it's very small
-        // This prevents it from feeling completely stuck when resistance is near max
-        const dragSensitivity = (1 - resistanceFactor < 0.1) ? 0.15 : 0.10;
-        const target = Math.min(MAX_PULL_DISTANCE, prev + effectiveDragAmount * dragSensitivity);
-
-        // Smoother blend, but still responsive to the tiny effective drag
-        const lerpedDistance = prev * 0.60 + target * 0.40;
-        pullDistanceRef.current = lerpedDistance;
-        return lerpedDistance;
+        // Apply a small fraction of the already tiny effective drag
+        // This will make movement very slow and difficult when resistance is high
+        const target = Math.min(MAX_PULL_DISTANCE, prev + effectiveDragAmount * 0.05);
+        // Minimal blending to make the difficulty very apparent
+        const newDistance = prev * 0.30 + target * 0.70;
+        pullDistanceRef.current = newDistance;
+        return newDistance;
       });
     }
   };
