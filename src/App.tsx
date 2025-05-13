@@ -127,6 +127,29 @@ function App() {
     };
   }, []);
 
+  // Prevent iOS Safari tab overview gesture
+  useEffect(() => {
+    // This function will handle and prevent all touch events globally
+    const preventIosTabGesture = (e: TouchEvent) => {
+      // Only prevent when we're actively dragging to avoid interfering with normal interactions
+      if (isDragging && e.touches.length > 1) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    // Add listener with passive: false to allow preventDefault
+    document.addEventListener('touchstart', preventIosTabGesture, { passive: false });
+    document.addEventListener('touchmove', preventIosTabGesture, { passive: false });
+    document.addEventListener('touchend', preventIosTabGesture, { passive: false });
+
+    return () => {
+      document.removeEventListener('touchstart', preventIosTabGesture);
+      document.removeEventListener('touchmove', preventIosTabGesture);
+      document.removeEventListener('touchend', preventIosTabGesture);
+    };
+  }, [isDragging]);
+
   // Handle drag start
   const handleDragStart = (clientY: number) => {
     if (isRefreshing) return;
@@ -221,6 +244,19 @@ function App() {
   const handleTouchMove = (e: React.TouchEvent) => {
     handleDragMove(e.touches[0].clientY);
 
+    // Handle multi-touch - prevent iOS Safari tab overview
+    if (e.touches.length > 1) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // If user adds a second finger, increase the drag strength (simulate harder pull)
+      // This allows the user to engage "both hands" as requested
+      if (pullDistance > 0) {
+        // Simulate a harder pull when multiple fingers are used
+        setPullDistance(prev => Math.min(MAX_PULL_DISTANCE, prev * 1.2));
+      }
+    }
+
     // Prevent default behavior only when we're actively dragging
     // This is crucial to prevent the browser's native pull-to-refresh
     if (isDragging && pullDistance > 0) {
@@ -314,7 +350,7 @@ function App() {
       {/* Feed content */}
       <div
         ref={feedRef}
-        className="overflow-y-auto"
+        className="feed-container overflow-y-auto"
         style={{ height: 'calc(100vh - 106px)' }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}

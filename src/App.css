@@ -3,7 +3,7 @@
   box-sizing: border-box;
 }
 
-body {
+html, body {
   margin: 0;
   padding: 0;
   background-color: black;
@@ -12,6 +12,19 @@ body {
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: contain; /* Important for pull-to-refresh */
   overflow-x: hidden;
+  /* Prevent iOS Safari gestures */
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Additional anti-gesture class for feed container */
+.feed-container {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  isolation: isolate; /* Creates a new stacking context */
 }
 
 /* X.com spinner animation */
