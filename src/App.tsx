@@ -55,60 +55,49 @@ function App() {
   const MAX_PULL_DISTANCE = 300;
   const MESSAGE_THRESHOLD = 60; // When to start showing messages
 
-  // System creates smooth resistance with fluid animation
+  // System creates smooth, predictable resistance
   const animate = (timestamp: number) => {
-    // Ensure we have a valid timestamp
     if (!lastTimeRef.current) lastTimeRef.current = timestamp;
-
-    // Calculate delta time for smooth physics
     const delta = timestamp - lastTimeRef.current;
     const smoothDelta = delta / 16.667; // Normalize to 60fps
     lastTimeRef.current = timestamp;
 
     if (isDragging) {
-      // Smooth continuous resistance that scales with distance
-      if (pullDistanceRef.current > 0) {
-        // Apply a consistent, smooth resistance force
-        const resistancePercent = Math.min(0.5, 0.15 + (pullDistanceRef.current / MAX_PULL_DISTANCE * 0.35));
-        const resistanceForce = pullDistanceRef.current * resistancePercent * smoothDelta * 0.4;
+      // System actively pulls back based on how far it's been dragged
+      if (pullDistanceRef.current > 10) { // Start pulling back after a small initial drag
+        // Resistance force increases quadratically with pullDistance
+        const pullBackStrength = 0.002 * Math.pow(pullDistanceRef.current, 1.5);
+        const resistanceForce = pullBackStrength * smoothDelta * 1.5; // Make it feel strong
 
-        // Apply resistance with cubic easing for fluid movement
         setPullDistance(prev => {
           const newValue = Math.max(0, prev - resistanceForce);
           pullDistanceRef.current = newValue;
           return newValue;
         });
 
-        // Show fight messages with consistent timing
-        if (pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.96) {
+        // Show fight messages when resistance is significant
+        if (resistanceForce > 1 && pullDistanceRef.current > MESSAGE_THRESHOLD && Math.random() > 0.95) {
           const randomMessage = FIGHT_MESSAGES[Math.floor(Math.random() * FIGHT_MESSAGES.length)];
           setFightMessage(randomMessage);
           setShowMessage(true);
-
-          setTimeout(() => {
-            setShowMessage(false);
-          }, 1000);
+          setTimeout(() => setShowMessage(false), 1200);
         }
       }
     } else if (pullDistanceRef.current > 0) {
-      // Smooth spring-back when released
-      // Calculate a smooth decay with cubic easing
-      const springForce = Math.max(pullDistanceRef.current * 0.15, 5) * smoothDelta;
-
+      // Smooth and quick spring-back when released (Point 4)
+      const releaseSpringForce = Math.max(pullDistanceRef.current * 0.20, 10) * smoothDelta; // Faster retraction
       setPullDistance(prev => {
-        const newValue = Math.max(0, prev - springForce);
+        const newValue = Math.max(0, prev - releaseSpringForce);
         pullDistanceRef.current = newValue;
         return newValue;
       });
     }
 
-    // Update spinner rotation smoothly
     if (pullDistanceRef.current > VOID_APPEAR_THRESHOLD) {
-      const rotationSpeed = 120 * smoothDelta; // degrees per second (2 rpm)
+      const rotationSpeed = 120 * smoothDelta;
       setSpinnerRotation(prev => (prev + rotationSpeed) % 360);
     }
 
-    // Continue animation as long as needed
     if (pullDistanceRef.current > 0 || isDragging || isRefreshing) {
       animationRef.current = requestAnimationFrame(animate);
     } else {
@@ -181,52 +170,33 @@ function App() {
     }
   };
 
-  // Handle drag movement with perfectly smooth transitions
+  // Handle drag movement with smooth, predictable, increasing resistance
   const handleDragMove = (clientY: number) => {
     if (!isDragging || isRefreshing) return;
 
     const dragY = clientY - dragStartY;
 
-    // Calculate smooth velocity
-    const timeDelta = Date.now() - lastDragTimeRef.current || 16;
-    lastDragTimeRef.current = Date.now();
-
-    const dragDelta = clientY - lastDragYRef.current;
-    // Smooth velocity with stronger weight on current movement
-    pullVelocityRef.current = pullVelocityRef.current * 0.5 + (dragDelta / timeDelta) * 25 * 0.5;
-    lastDragYRef.current = clientY;
-
     if (dragY > 0) {
-      // Calculate a smooth, progressive resistance curve
+      // Point 1: Initial Easy Pull - Resistance starts low
+      // Point 2: Increasing, Non-Dynamic Resistance - Ramps up significantly
+      let resistanceFactor = 0.1; // Initial low resistance
+      if (pullDistanceRef.current > 30) { // Start ramping up resistance after initial easy pull
+        // Resistance increases quadratically making it much harder to pull further
+        const distanceEffect = (pullDistanceRef.current - 30) / (MAX_PULL_DISTANCE - 30);
+        resistanceFactor += Math.pow(distanceEffect, 2) * 0.85; // Max additional 0.85 resistance
+      }
+      resistanceFactor = Math.min(0.95, resistanceFactor); // Cap resistance at 95%
 
-      // Base resistance is consistent and scales with distance
-      const baseResistance = 0.2;
+      const effectiveDrag = dragY * (1 - resistanceFactor);
 
-      // Accumulated resistance builds up smoothly
-      resistanceRef.current = resistanceRef.current * 0.95 + 0.001 * Math.min(dragY, 200) * 0.05;
-      const accumulatedResistance = Math.min(0.35, resistanceRef.current);
-
-      // Distance-based resistance has a smooth curve
-      const distanceCurve = pullDistanceRef.current / MAX_PULL_DISTANCE;
-      const distanceResistance = 0.45 * Math.pow(distanceCurve, 1.2);
-
-      // Total resistance with smooth scaling
-      const totalResistance = Math.min(0.9, baseResistance + accumulatedResistance + distanceResistance);
-
-      // Apply cubic easing for natural feel
-      const cubicEasing = Math.pow(1 - totalResistance, 3);
-
-      // Calculate distance with smooth resistance
-      const dragEffectiveness = dragY * cubicEasing;
-
-      // Apply with smooth blending
+      // Point 3: Effort to Refresh - achieved by strong resistanceFactor
       setPullDistance(prev => {
-        // Cubic interpolation for perfect smoothness
-        const t = 0.4; // Blend factor (0-1)
-        const newDist = Math.min(MAX_PULL_DISTANCE,
-          prev * (1-t) + dragEffectiveness * t);
-        pullDistanceRef.current = newDist;
-        return newDist;
+        // Smoothly blend to the new position based on effectiveDrag
+        const target = Math.min(MAX_PULL_DISTANCE, prev + effectiveDrag * 0.1); // Apply a fraction of effective drag per frame for smoothness
+        // Smoother transition: Lerp (linear interpolation)
+        const lerpedDistance = prev * 0.7 + target * 0.3;
+        pullDistanceRef.current = lerpedDistance;
+        return lerpedDistance;
       });
     }
   };
